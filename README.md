@@ -36,15 +36,15 @@ It uses a Retrieval-Augmented Generation (RAG) pipeline with a vectorstore to pr
 
 1. Clone the repository:
 ```bash
-git clone <your-repo-url>
-cd Labor-Rights-RAG-Assistant
+git clone https://github.com/Batouls1/Labour_Rights_RAG_Assistant
+cd Labour_Rights_RAG_Assistant
 ```
 
 2. Create a virtual environment and activate it:
 ```bash
 # Windows
 python -m venv venv
-venv\Scripts\activate
+venv\Scripts\activate.bat
 
 # Mac/Linux
 python -m venv venv
