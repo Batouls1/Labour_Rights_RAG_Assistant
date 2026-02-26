@@ -1,0 +1,15 @@
+openai
+python-dotenv
+faiss-cpu
+sentence-transformers
+langchain
+pypdf
+numpy
+pandas
+tqdm
+tiktoken
+gradio
+requests
+fastapi
+uvicorn
+
