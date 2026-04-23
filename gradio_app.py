@@ -1,8 +1,11 @@
 import gradio as gr
 import requests
+import os
+from dotenv import load_dotenv
 
 # Config
-API_URL = "http://127.0.0.1:8000/ask"
+load_dotenv()
+API_URL = os.getenv("API_URL", "http://127.0.0.1:8000/ask")
 TIMEOUT = 60  # reranker can be slow on CPU
 
 # API call
@@ -115,7 +118,7 @@ with gr.Blocks() as app:
                 ---
 
                 ### Example questions
-                - *What prior notice is required before termination?*
+                - *What are the basic rights of an employee?*
                 - *كيف تزداد الإجازة السنوية بناءً على سنوات الخدمة؟*
                 - *Is maternity leave paid and for how long?*
                 - *هل يحق للعمال الأجانب الضمان الاجتماعي؟*
