@@ -145,6 +145,8 @@ Runs 7 tests covering pipeline initialization, language detection, retrieval lan
 - Evaluation conducted on a manually curated dataset of 30 questions — results are directional rather than statistically definitive
 - Arabic retrieval underperforms English due to BM25 morphology limitations and multilingual embedding tradeoffs (Recall@3: 0.62 vs 1.00)
 - Currently runs locally; cloud deployment, containerization, and concurrent user handling are not yet implemented
+- No streaming — responses are returned in full after processing, resulting in 10-13 second wait times on CPU
+- No conversation memory — each question is independent; chat history is visual only and not fed back to the model
 
 ---
 
