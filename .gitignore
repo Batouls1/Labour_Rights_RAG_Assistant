@@ -38,3 +38,11 @@ logs/
 # Gradio
 .gradio/
 gradio_cached_examples/
+
+# Project-specific — large binary files
+*.faiss
+*.pkl
+
+# HuggingFace model cache
+.cache/
+huggingface/
