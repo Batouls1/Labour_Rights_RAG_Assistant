@@ -3,6 +3,8 @@ python-dotenv
 faiss-cpu
 sentence-transformers
 langchain
+langchain-community
+langchain-text-splitters
 pypdf
 numpy
 pandas
@@ -12,4 +14,6 @@ gradio
 requests
 fastapi
 uvicorn
-
+rank-bm25
+scikit-learn
+scipy

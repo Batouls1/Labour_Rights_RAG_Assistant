@@ -1,36 +1,72 @@
-# 📚 Legal RAG Assistant
+# 📚 Legal RAG Assistant — Lebanese Labor Law
 
-A Legal Question-Answering assistant for Employment Rights and Self-Employment Legal Guides in Lebanon.
-It uses a Retrieval-Augmented Generation (RAG) pipeline with a vectorstore to provide precise answers strictly based on legal guides.
+A bilingual (Arabic/English) Legal Question-Answering assistant for Employment Rights and Self-Employment law in Lebanon. Built on a production-shaped RAG pipeline with hybrid retrieval, cross-encoder reranking, and a full bilingual evaluation suite.
 
+---
 
-## Features:
+## Highlights
 
-- Answer legal questions using local guides (Employment-Rights-Guide.pdf and Self-Employment-Guide.pdf).
+- **Bilingual support** — answers questions in both Arabic and English, with language-aware retrieval and generation.
 
-- Returns the answer and the exact sources (document and page numbers).
+- **Hybrid retrieval** — combines dense semantic search (multilingual E5 embeddings + FAISS) with sparse keyword search (BM25) for more robust retrieval.
 
-- Clean, interactive chat interface built with Gradio.
+- **Cross-encoder reranking** — re-scores retrieved chunks jointly with the query for higher-quality context before generation.
 
-- Uses OpenAI GPT for precise responses with RAG-based context retrieval.
+- **Grounded generation with refusal** — GPT-4.1-mini answers strictly from retrieved context; explicitly refuses to answer when information is not in the guides (validated at 100% refusal accuracy).
 
-- Error-handled: No crashes even if questions are invalid or retrieval fails.
+- **Full evaluation suite** — Precision@K, Recall@K, Hit@K, MRR, behavioral accuracy, and LLM-as-judge scoring across both languages.
 
+- **Production-shaped architecture** — separated pipeline, FastAPI backend, Gradio interface, test suite with metrics thresholds, structured logging throughout.
+
+---
+
+## Evaluation Results
+
+| Metric | English | Arabic |
+|---|---|---|
+| Answer accuracy | 0.96 | 0.88 |
+| Refusal accuracy | 1.00 | 1.00 |
+| Recall@3 | 1.00 | 0.62 |
+| MRR (K=10) | 0.822 | 0.416 |
+| LLM judge avg | 3.00 / 3 | 2.75 / 3 |
+
+---
 
 ## Folder Structure:
 ```
-├─ development_notebook.ipynb
-├─ rag_pipeline.py          # Core RAG pipeline
-├─ test_pipeline.py         # Example/testing scripts for RAG pipeline
-├─ gradio_app.py            # Gradio chat interface
-├─ api.py                   # FastAPI endpoint serving the RAG pipeline
-├─ data/                    # Folder containing legal guide PDFs
-├─ assets/                  # Folder containing the demo screenshot
-├─ chunks.pkl               # Serialized text chunks for retrieval
-├─ index.faiss              # FAISS vector index
+├─ development_notebook.ipynb # Full pipeline development + evaluation
+├─ rag_pipeline.py            # Core bilingual RAG pipeline (hybrid retrieval, reranking, generation)
+├─ test_pipeline.py           # Test suite: language detection, retrieval filter, refusal, metrics
+├─ gradio_app.py              # Bilingual Gradio chat interface
+├─ api.py                     # FastAPI backend with input validation, error handling, logging
+├─ data/                      # Lebanese labor law PDF guides (Arabic + English)
+├─ assets/                    # Demo screenshot                         
 ├─ requirements.txt 
 └─ README.md
 ```
+---
+
+## Pipeline Overview
+
+**1. Document loading & chunking**
+PDFs are loaded, blank pages removed, and language-tagged by filename. Text is split into token-aware overlapping chunks (500 tokens, 100 overlap) using tiktoken.
+
+**2. Embedding generation**
+Chunks are encoded with `intfloat/multilingual-e5-base` using E5's required `passage:` prefix. Embeddings are L2-normalized for cosine similarity via inner product.
+
+**3. Hybrid retrieval (FAISS + BM25)**
+Dense vectors indexed with `IndexFlatIP`. BM25 provides keyword matching with language-aware tokenization. Scores combined with language-specific weights (EN: 0.7/0.3, AR: 0.5/0.5).
+
+**4. Language-aware filtering**
+Query language detected via Unicode range analysis. Retrieval strictly filtered to same-language chunks to prevent cross-language mixing.
+
+**5. Cross-encoder reranking**
+Retrieved candidates reranked with `cross-encoder/mmarco-mMiniLMv2-L12-H384-v1`. Final context: top 3 chunks (English), top 5 (Arabic).
+
+**6. Grounded generation**
+Language-specific prompts injected into GPT-4.1-mini with an explicit refusal mechanism when the answer is not found in context.
+
+---
 
 ## Setup and Installation:
 
@@ -56,10 +92,12 @@ source venv/bin/activate
 pip install -r requirements.txt
 ```
 
-4. **Create a .env file in the project root with your OpenAI API key:**
-
+4. **Create a `.env` file in the project root with your OpenAI API key:**
+```bash
 OPENAI_API_KEY=your_openai_api_key_here
-
+API_URL=http://127.0.0.1:8000/ask
+```
+---
 
 ## Running the Project:
 
@@ -70,73 +108,47 @@ uvicorn api:app --reload
 - The server runs at: http://127.0.0.1:8000/ask
 - This endpoint handles legal questions and returns JSON responses.
 
-**Step 2 - Start the Gradio interface**
-
-In a new terminal (same virtual environment):
+**Step 2 - Start the Gradio interface** (new terminal, same venv):
 ```bash
 python gradio_app.py
 ```
-- Open your browser at http://127.0.0.1:7860
-- Ask legal questions and get answers with sources displayed in the chat.
+- Open your browser at `http://127.0.0.1:7860`
+- Type questions in English or Arabic.
 
-*Tip:* The chat keeps history of previous questions; use Clear Chat to reset.
+---
 
-
-## Testing the RAG Pipeline:
-
-You can test retrieval and answer generation directly:
+## Running the Test Suite
 ```bash
 python test_pipeline.py
 ```
-- Includes example queries and computes retrieval accuracy (Hit@3).
-- Useful for debugging or verifying the RAG pipeline.
+Runs 7 tests covering pipeline initialization, language detection, retrieval language filtering, refusal on unanswerable questions, source citation, empty query handling, and retrieval metric thresholds (Hit@3, MRR) for both languages. All tests must pass before committing changes.
 
+---
 
-## Project Workflow:
+## Tech Stack
 
-**1. RAG Pipeline (rag_pipeline.py):**
+| Component | Technology |
+|---|---|
+| Embeddings | `intfloat/multilingual-e5-base` |
+| Vector search | FAISS `IndexFlatIP` |
+| Sparse retrieval | BM25Okapi (rank-bm25) |
+| Reranker | `cross-encoder/mmarco-mMiniLMv2-L12-H384-v1` |
+| Generation | GPT-4.1-mini (OpenAI) |
+| API | FastAPI + Uvicorn |
+| Interface | Gradio |
+| Chunking | LangChain + tiktoken |
 
-- Loads FAISS index and text chunks.
-- Embeds the query using SentenceTransformer.
-- Retrieves top-k relevant chunks.
-- Generates an answer using OpenAI GPT, strictly based on retrieved context.
+---
 
-**2. API Endpoint (api.py):**
+## Limitations
 
-- Wraps the pipeline with FastAPI.
-- Returns answers and sources in JSON.
-- Handles errors properly.
+- Evaluation conducted on a manually curated dataset of 30 questions — results are directional rather than statistically definitive
+- Arabic retrieval underperforms English due to BM25 morphology limitations and multilingual embedding tradeoffs (Recall@3: 0.62 vs 1.00)
+- Currently runs locally; cloud deployment, containerization, and concurrent user handling are not yet implemented
 
-**3. Gradio Chat (gradio_app.py):**
-
-- Provides a user-friendly interface.
-- Sends questions to the FastAPI endpoint.
-- Displays answers and sources in chat format.
-
-
-### Notes:
-
-- **Local usage only:** For now, the app runs locally. A sharable public URL can be generated using Gradio's share=True, or you can deploy on a cloud server for permanent hosting.
-
-- **Number of questions:** Chat history is stored in memory; no hard limit, but very long sessions may slightly affect performance.
-
-- **Data privacy:** The app uses your OpenAI API key locally. No external storage of questions or answers.
-
-
-## Dependencies:
-
-- **gradio** - chat interface
-- **fastapi + uvicorn** - API server
-- **openai** - GPT completions
-- **faiss** - vector search
-- **sentence-transformers** - embeddings
-- **python-dotenv** - load .env keys
-- **numpy, pickle** - data handling
-
+---
 
 ## Demo
-
-Here's how the Legal RAG Assistant looks when running locally:
 
 ![Demo Screenshot](assets/demo_screenshot.png)
 
